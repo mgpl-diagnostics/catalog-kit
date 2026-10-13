@@ -1,0 +1,5 @@
+node_modules
+dist
+*.tsbuildinfo
+# generated from data/catalog.json by scripts/gen-data.mjs
+src/data.generated.ts
