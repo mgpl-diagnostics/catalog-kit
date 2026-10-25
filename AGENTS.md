@@ -9,6 +9,7 @@ no I/O, no UI. report-kit and invoice-kit consume it.
 ```
 data/catalog.json        THE DATA — source of truth (edit here)
 scripts/gen-data.mjs     data/catalog.json → src/data.generated.ts (git-ignored, generated on build/test)
+scripts/ids.mjs          npm run ids: assigns MGPL ids to new entries, orders tests → profiles → packages
 src/types.ts             LabTest, Parameter, Interval, ParameterType…
 src/search.ts            inverted index + binary-search prefixes + trigram typo fallback + SYNONYMS
 src/index.ts             TESTS, lookups, filters, rangeFor / formatRange / flagResult, totalPrice
@@ -27,6 +28,9 @@ scripts/test.ts          integrity, lookups, search-quality table, speed benchma
    table in `scripts/test.ts`. Synonym values are `|`-separated phrases whose words must all match.
 7. **Don't invent reference ranges.** They come from the lab's test master and need a pathologist's sign-off.
 8. Never commit patient data, credentials, or cost prices.
+9. **Ids are MGPL ids and never change.** `MGPLT####` tests, `MGPLP####` profiles, `MGPLK####` packages, one
+   gap-free sequence per kind, catalog ordered tests → profiles → packages. Add an entry with its `kind` and
+   `"id": null`, then `npm run ids`. Never renumber or reuse an id; `legacyId` keeps the lab software's old id.
 
 ## Commands
 

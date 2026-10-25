@@ -1,7 +1,7 @@
 {
   "name": "@mgpl-diagnostics/catalog-kit",
-  "version": "1.0.1",
-  "description": "MGPL Diagnostics test catalog: every test and profile with parameters, units, methods, reference ranges, sample types and INR prices. Typed, zero dependencies, with fast fuzzy search.",
+  "version": "2.0.0",
+  "description": "MGPL Diagnostics test catalog: every test, profile and package with parameters, units, methods, reference ranges, sample types and INR prices. Typed, zero dependencies, with fast fuzzy search.",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
   "repository": "github:mgpl-diagnostics/catalog-kit",
@@ -29,6 +29,7 @@
   },
   "scripts": {
     "data": "node scripts/gen-data.mjs",
+    "ids": "node scripts/ids.mjs",
     "build": "node scripts/gen-data.mjs && tsup",
     "typecheck": "node scripts/gen-data.mjs && tsc --noEmit",
     "test": "node scripts/gen-data.mjs && tsx scripts/test.ts",

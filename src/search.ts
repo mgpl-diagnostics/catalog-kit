@@ -114,7 +114,7 @@ export function createSearchIndex(tests: readonly LabTest[]): SearchIndex {
   };
 
   tests.forEach((t, doc) => {
-    for (const c of [t.code, t.shortCode, t.searchCode]) {
+    for (const c of [t.id, t.code, t.shortCode, t.searchCode]) {
       if (!c) continue;
       const k = normalize(c).replace(/ /g, "");
       if (!k) continue;

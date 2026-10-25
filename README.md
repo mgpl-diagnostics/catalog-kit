@@ -14,11 +14,15 @@ plus fast fuzzy search. Zero dependencies. Works in Node, browsers, workers and 
 
 | | |
 | --- | --- |
-| **614 tests** across 9 departments | Clinical Biochemistry, Clinical Pathology, Cytopathology, Hematology, Histopathology, Immunology, Microbiology, Molecular, Serology |
+| **614 entries** (584 tests, 30 profiles) across 9 departments | Clinical Biochemistry, Clinical Pathology, Cytopathology, Hematology, Histopathology, Immunology, Microbiology, Molecular, Serology |
 | **1,911 parameters** | unit, method, male / female reference interval, options, narrative reference |
 | **29 sample types** | SERUM, EDTA, URINE, SODIUM FLUORIDE, SODIUM CITRATE, STOOL, SEMEN, CSF… |
 | **83 calculated parameters** | each with its formula, in readable form (`(28.7*HBA1C)-46.7`) |
 | **Prices** | in rupees, for 612 tests |
+
+Every entry has an **MGPL id**: `MGPLT0001`… for tests, `MGPLP0001`… for profiles and `MGPLK0001`…
+for packages (none yet). Each kind has its own gap-free sequence, and the catalog lists tests first,
+then profiles, then packages. The lab software's old numeric id is kept as `legacyId`.
 
 Units and methods are normalised (`mg/dl` → `mg/dL`, `CALCULATED` → `Calculated`), and narrative
 references are plain text, with no HTML.
@@ -41,6 +45,8 @@ search("vit d").map((h) => h.test.name); // ["VITAMIN D PROFILE (D2,D3,TOTAL D)"
 search("thyriod");                     // typo-tolerant → Thyroid tests
 
 const cbc = getTestByCode("CBC")!;      // also short / search codes, case-insensitive
+cbc.id;                                 // "MGPLT0196"
+getTest("MGPLT0196") === cbc;           // by MGPL id (or by the old numeric id, cbc.legacyId)
 cbc.sampleType;                         // "EDTA"
 cbc.mrp;                                // price in rupees
 
@@ -50,14 +56,14 @@ hb.method;                              // "SLS-Hemoglobin"
 formatRange(hb, "female");              // "11 - 16"
 flagResult(hb, 10.2, "female");         // "L"
 
-totalPrice(["CBC", "HBA1C"]);           // { total, tests, unknown: [] }
+totalPrice(["CBC", "HBA1C", "MGPLP0014"]); // { total, tests, unknown: [] }
 ```
 
 ## Search
 
 `search(query, { limit, department, sampleType, fuzzy })` ranks tests by:
 
-1. **Exact code**: `CBC`, `LIFT`, `HBA1C`, `T3T4TSH`.
+1. **Exact code or id**: `CBC`, `LIFT`, `HBA1C`, `T3T4TSH`, `MGPLP0014`.
 2. **Exact words** in the name, then parameters, department and sample type.
 3. **Prefixes**: `creatinin` → Creatinine.
 4. **Typos**: `cholestrol`, `thyriod` (trigram similarity).
@@ -75,15 +81,16 @@ measures both.
 | --- | --- |
 | `TESTS`, `CATALOG` | the data |
 | `DEPARTMENTS`, `SAMPLE_TYPES` | sorted lists |
-| `getTest(id)`, `getTestByCode(code)` | lookups |
-| `testsByDepartment(d)`, `testsBySampleType(s)` | filters |
-| `isProfile(test)` | more than one parameter (CBC, LFT, Kidney Profile…) |
+| `getTest(id)`, `getTestByCode(code)` | lookups (MGPL id, or the old numeric `legacyId`) |
+| `testsByKind(k)`, `testsByDepartment(d)`, `testsBySampleType(s)` | filters |
+| `isProfile(test)`, `isPackage(test)` | `kind` is `profile` (LFT, Kidney Profile, TORCH…) or `package` |
+| `ID_PREFIX`, `ID_PATTERN` | `MGPLT` / `MGPLP` / `MGPLK`, and `/^MGPL[TPK]\d{4}$/` |
 | `search(q, opts)`, `createSearchIndex(tests)` | search, or build your own index over a subset |
 | `rangeFor(param, sex)`, `formatRange(param, sex)`, `flagResult(param, value, sex)` | reference intervals |
 | `totalPrice(idsOrCodes)` | sum prices, reporting unknown entries |
 | `normalize(text)`, `SYNONYMS` | the search's text folding and shorthand table |
 
-Types: `LabTest`, `Parameter`, `ParameterType` (`numeric` · `text` · `options` · `image` · `title`),
+Types: `LabTest`, `CatalogId`, `CatalogKind` (`test` · `profile` · `package`), `Parameter`, `ParameterType` (`numeric` · `text` · `options` · `image` · `title`),
 `Interval`, `Bound`, `Department`, `Sex`.
 
 ## Data
@@ -91,6 +98,10 @@ Types: `LabTest`, `Parameter`, `ParameterType` (`numeric` · `text` · `options`
 `data/catalog.json` is the source of truth. `npm run data` turns it into `src/data.generated.ts`,
 which holds the JSON as a string parsed at load time. That is faster than a large object literal,
 and cheap for TypeScript to check. Builds and tests regenerate it automatically.
+
+To add an entry, give it a `kind` and `"id": null` in the JSON and run `npm run ids`: it assigns the
+next id of that kind and re-orders the catalog (tests, profiles, packages). Ids are never renumbered
+or reused, so references stay valid; `npm test` checks the sequences.
 
 > **Medical note.** Reference ranges come from the lab's configured test master. They must be
 > checked by a qualified pathologist before clinical use.

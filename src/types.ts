@@ -50,8 +50,18 @@ export type Department =
   | "SEROLOGY"
   | (string & {});
 
+/** What an entry is. Ids are numbered per kind: tests first, then profiles, then packages. */
+export type CatalogKind = "test" | "profile" | "package";
+
+/** "MGPLT0001" (test), "MGPLP0001" (profile), "MGPLK0001" (package): prefix + kind letter + 4 digits. */
+export type CatalogId = `MGPL${"T" | "P" | "K"}${string}`;
+
 export interface LabTest {
-  id: number;
+  /** MGPL id, e.g. "MGPLT0001". Assigned once by `npm run ids`, never reused or renumbered. */
+  id: CatalogId;
+  kind: CatalogKind;
+  /** The lab software's numeric id (catalog-kit 1.x `id`); null for entries added after the move to MGPL ids. */
+  legacyId: number | null;
   name: string;
   code: string | null;
   shortCode: string | null;

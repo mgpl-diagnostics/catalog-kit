@@ -1,10 +1,11 @@
 # @mgpl-diagnostics/catalog-kit
 
-> Typed, zero-dependency catalog of MGPL Diagnostics lab tests: 614 tests and profiles, 1,911 parameters with canonical units, methods, male/female reference intervals, options, narrative references and readable formulas for calculated values; sample types; prices in rupees. Includes a fast fuzzy search (~30 µs/query) that understands lab shorthand (LFT, KFT, SGPT, FBS, Vit D, B12) and typos.
+> Typed, zero-dependency catalog of MGPL Diagnostics lab tests: 614 tests and profiles (MGPL ids: MGPLT0001… tests, MGPLP0001… profiles, MGPLK0001… packages), 1,911 parameters with canonical units, methods, male/female reference intervals, options, narrative references and readable formulas for calculated values; sample types; prices in rupees. Includes a fast fuzzy search (~30 µs/query) that understands lab shorthand (LFT, KFT, SGPT, FBS, Vit D, B12) and typos.
 
 Key facts for agents:
 - `search(query, { limit, department, sampleType, fuzzy })` → `[{ test, score }]`.
-- `getTestByCode("CBC")`, `getTest(id)`, `testsByDepartment()`, `testsBySampleType()`, `isProfile()`.
+- `getTestByCode("CBC")`, `getTest("MGPLT0196")` (or the old numeric `legacyId`), `testsByKind()`, `testsByDepartment()`, `testsBySampleType()`, `isProfile()`, `isPackage()`.
+- Ids: `test.id` is `MGPL` + kind letter (T/P/K) + 4 digits, one gap-free sequence per kind; tests come first, then profiles, then packages. New entries get ids from `npm run ids`; ids are never renumbered.
 - `formatRange(param, sex)`, `flagResult(param, value, sex)` → "L" | "H" | "".
 - `totalPrice(["CBC", "HBA1C"])` → { total, tests, unknown }. Prices are `test.mrp`, whole rupees.
 - Data lives in `data/catalog.json`; `src/data.generated.ts` is generated. Edit the JSON, then `npm test`.
