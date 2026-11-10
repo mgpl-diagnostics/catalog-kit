@@ -59,6 +59,22 @@ flagResult(hb, 10.2, "female");         // "L"
 totalPrice(["CBC", "HBA1C", "MGPLP0014"]); // { total, tests, unknown: [] }
 ```
 
+## Calculated parameters
+
+83 parameters are calculated (indirect bilirubin, globulin, A/G ratio, eGFR, 24-hour urine totals, ratios…).
+`computeCalculated(test, values, { sex, ageYears })` computes the ones whose formula resolves (37 of the 38
+with a formula) from the values entered, by parameter name: chains are followed (A/G ratio from a calculated
+globulin), entered values are never replaced, and nothing is returned when an input is missing or not a
+number. eGFR needs sex and age. The rest (CBC indices and absolute counts) come from the analyzer and are
+entered like any other value.
+
+```ts
+computeCalculated(getTestByCode("LIFT")!, { "BILIRUBIN - TOTAL": "2.6", "BILIRUBIN -DIRECT": "1.1", "TOTAL-PROTEIN": "7.6", "ALBUMIN - SERUM": "4.4" });
+// { "BILIRUBIN (INDIRECT)": 1.5, GLOBULIN: 3.2, "ALB/GLOBULIN RATIO": 1.38 }
+```
+
+Formulas are read by a small arithmetic parser (+ − × ÷ ^, min, max, age, sex constants), never `eval`.
+
 ## Search
 
 `search(query, { limit, department, sampleType, fuzzy })` ranks tests by:
@@ -87,6 +103,7 @@ measures both.
 | `ID_PREFIX`, `ID_PATTERN` | `MGPLT` / `MGPLP` / `MGPLK`, and `/^MGPL[TPK]\d{4}$/` |
 | `search(q, opts)`, `createSearchIndex(tests)` | search, or build your own index over a subset |
 | `rangeFor(param, sex)`, `formatRange(param, sex)`, `flagResult(param, value, sex)` | reference intervals |
+| `computeCalculated(test, values, { sex, ageYears })`, `formulaFor(test, name)`, `resolvedFormulas(test)` | calculated parameters |
 | `totalPrice(idsOrCodes)` | sum prices, reporting unknown entries |
 | `normalize(text)`, `SYNONYMS` | the search's text folding and shorthand table |
 
