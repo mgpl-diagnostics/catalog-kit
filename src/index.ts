@@ -6,6 +6,8 @@ export * from "./types";
 export { createSearchIndex, normalize, SYNONYMS } from "./search";
 export type { SearchHit, SearchIndex, SearchOptions } from "./search";
 export { CATALOG };
+export { computeCalculated, evaluate, formulaFor, resolvedFormulas, roundResult } from "./calc";
+export type { CalcContext, ResolvedFormula } from "./calc";
 
 /** Every entry in catalog order: tests, then profiles, then packages, each by id. */
 export const TESTS: readonly LabTest[] = CATALOG.tests;

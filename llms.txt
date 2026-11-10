@@ -7,6 +7,7 @@ Key facts for agents:
 - `getTestByCode("CBC")`, `getTest("MGPLT0196")` (or the old numeric `legacyId`), `testsByKind()`, `testsByDepartment()`, `testsBySampleType()`, `isProfile()`, `isPackage()`.
 - Ids: `test.id` is `MGPL` + kind letter (T/P/K) + 4 digits, one gap-free sequence per kind; tests come first, then profiles, then packages. New entries get ids from `npm run ids`; ids are never renumbered.
 - `formatRange(param, sex)`, `flagResult(param, value, sex)` → "L" | "H" | "".
+- `computeCalculated(test, values, { sex, ageYears })` → calculated parameters (indirect bilirubin, globulin, A/G, eGFR…) from entered values.
 - `totalPrice(["CBC", "HBA1C"])` → { total, tests, unknown }. Prices are `test.mrp`, whole rupees.
 - Data lives in `data/catalog.json`; `src/data.generated.ts` is generated. Edit the JSON, then `npm test`.
 - Reference ranges need a pathologist's sign-off before clinical use.

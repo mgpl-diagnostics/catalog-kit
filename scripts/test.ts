@@ -2,6 +2,7 @@
 import {
   DEPARTMENTS, ID_PATTERN, ID_PREFIX, SAMPLE_TYPES, TESTS, createSearchIndex, flagResult, formatRange, getTest,
   getTestByCode, isPackage, isProfile, rangeFor, search, testsByKind, totalPrice, type CatalogKind,
+  computeCalculated, evaluate, formulaFor, resolvedFormulas, roundResult,
 } from "../src/index";
 
 let failed = 0;
@@ -134,6 +135,34 @@ for (let i = 0; i < N; i++) idx.search(queries[i % queries.length]!, { limit: 10
 const per = ((performance.now() - t1) / N) * 1000;
 console.log(`\nindex build ${build.toFixed(1)} ms · ${per.toFixed(1)} µs per query (${N} queries)`);
 ok(per < 1000, "search under 1 ms per query");
+
+// ---- calculated parameters
+{
+  let withFormula = 0, resolved = 0;
+  for (const t of TESTS) {
+    const r = resolvedFormulas(t);
+    for (const p of t.parameters) if (p.calculated && p.formula) { withFormula++; if (r.some((f) => f.param === p)) resolved++; }
+  }
+  ok(resolved >= withFormula - 1, `formulas resolved to their test's parameters: ${resolved} of ${withFormula}`);
+  const lft = TESTS.find((t) => t.code === "LIFT")!;
+  const v = computeCalculated(lft, { "BILIRUBIN - TOTAL": "2.60", "BILIRUBIN -DIRECT": "1.10", "TOTAL-PROTEIN": "7.60", "ALBUMIN - SERUM": "4.40" });
+  ok(v["BILIRUBIN (INDIRECT)"] === 1.5 && v["GLOBULIN"] === 3.2, "LFT: indirect bilirubin = total − direct, globulin = protein − albumin");
+  ok(v["ALB/GLOBULIN RATIO"] === 1.38, "LFT: A/G ratio follows the calculated globulin (chain)");
+  ok(formulaFor(lft, "GLOBULIN")?.inputs.join("|") === "TOTAL-PROTEIN|ALBUMIN - SERUM", "names with dashes align (longest name first)");
+  ok(!("BILIRUBIN (INDIRECT)" in computeCalculated(lft, { "BILIRUBIN - TOTAL": "2.6" })), "a missing input computes nothing");
+  ok(computeCalculated(lft, { "BILIRUBIN - TOTAL": "2.6", "BILIRUBIN -DIRECT": "1.1", "BILIRUBIN (INDIRECT)": "1.4" })["BILIRUBIN (INDIRECT)"] === undefined, "an entered value is never replaced");
+  ok(!("ALB/GLOBULIN RATIO" in computeCalculated(lft, { "ALBUMIN - SERUM": "4", GLOBULIN: "0" })), "division by zero computes nothing");
+  ok(!("BILIRUBIN (INDIRECT)" in computeCalculated(lft, { "BILIRUBIN - TOTAL": "high", "BILIRUBIN -DIRECT": "1" })), "a text value computes nothing");
+  const gfr = TESTS.find((t) => t.code === "GFR")!;
+  const e = computeCalculated(gfr, { CREATININE: "0.8" }, { sex: "female", ageYears: 33 })["GLOMERULAR FILTRATION RATE (GFR)"];
+  ok(e !== undefined && Math.abs(e - 98.53) < 0.1, `eGFR (CKD-EPI) female 33 y, creatinine 0.8 → ${e}`);
+  ok(Object.keys(computeCalculated(gfr, { CREATININE: "0.8" })).length === 0, "eGFR needs sex and age: none given, nothing computed");
+  ok(evaluate("min(#0,1)^-2", [0.5]) === 4 && evaluate("2^3^2", []) === 512 && evaluate("-(#0+1)*2", [1]) === -4, "evaluator: min, right-assoc ^, unary minus");
+  ok(roundResult(1.3800000001) === 1.38 && roundResult(0.012345) === 0.0123, "results are rounded for printing");
+  let threw = false;
+  try { evaluate("process.exit(1)", []); } catch { threw = true; }
+  ok(threw, "anything but arithmetic is refused (no eval)");
+}
 
 console.log(failed ? `\n${failed} FAILED` : "\nAll checks passed.");
 process.exit(failed ? 1 : 0);
