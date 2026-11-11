@@ -3496,8 +3496,7 @@
      "female": null,
      "options": [
       "1:40",
-      "1:80",
-      "{\"testWithDropDownValuesId\":4253,\"testRangeId\":18605,\"value\":\"\",\"testId\":10462,\"unit\":null,\"method\":null,\"labId\":252,\"created_by\":11421,\"created_on\":1751734092194,\"last_modified_by\":0,\"last_updated_on\":null,\"properties\":null,\"version\":null}"
+      "1:80"
      ],
      "calculated": false,
      "formula": null,
@@ -5659,7 +5658,7 @@
      "name": "Aldosterone",
      "unit": "ng/dL",
      "method": "CLIA",
-     "type": "text",
+     "type": "numeric",
      "position": 1,
      "male": null,
      "female": null,
@@ -5673,7 +5672,7 @@
      "name": "PLASMA RENIN ACTIVITY",
      "unit": "ng/mL",
      "method": "RIA",
-     "type": "text",
+     "type": "numeric",
      "position": 3,
      "male": null,
      "female": null,
@@ -15139,8 +15138,7 @@
      "female": null,
      "options": [
       "Not Applicable",
-      "Applicable",
-      "{\"testWithDropDownValuesId\":4650,\"testRangeId\":19653,\"value\":\"\",\"testId\":10653,\"unit\":null,\"method\":null,\"labId\":252,\"created_by\":11421,\"created_on\":1751734770632,\"last_modified_by\":0,\"last_updated_on\":null,\"properties\":null,\"version\":null}"
+      "Applicable"
      ],
      "calculated": false,
      "formula": null,
@@ -18570,8 +18568,7 @@
      "male": null,
      "female": null,
      "options": [
-      ".",
-      "{\"testWithDropDownValuesId\":4439,\"testRangeId\":19191,\"value\":\"\",\"testId\":10716,\"unit\":null,\"method\":null,\"labId\":252,\"created_by\":11421,\"created_on\":1751734236879,\"last_modified_by\":0,\"last_updated_on\":null,\"properties\":null,\"version\":null}"
+      "."
      ],
      "calculated": false,
      "formula": null,
@@ -34440,7 +34437,7 @@
      "male": null,
      "female": null,
      "options": [
-      "No bacterial growth was observed after ‎24 ‎hours of ‎ aerobic incubation"
+      "No bacterial growth was observed after 24 hours of  aerobic incubation"
      ],
      "calculated": false,
      "formula": null,
@@ -34464,7 +34461,7 @@
      "referenceText": null
     },
     {
-     "name": "Organism Isolated‎",
+     "name": "Organism Isolated",
      "unit": null,
      "method": null,
      "type": "options",
@@ -34480,7 +34477,7 @@
      "referenceText": null
     },
     {
-     "name": "Antibiogram‎",
+     "name": "Antibiogram",
      "unit": null,
      "method": null,
      "type": "text",
@@ -34494,7 +34491,7 @@
      "referenceText": null
     },
     {
-     "name": "Sensitive to‎",
+     "name": "Sensitive to",
      "unit": null,
      "method": null,
      "type": "options",
@@ -34510,7 +34507,7 @@
      "referenceText": null
     },
     {
-     "name": "Intermediate to‎",
+     "name": "Intermediate to",
      "unit": null,
      "method": null,
      "type": "text",
@@ -34524,7 +34521,7 @@
      "referenceText": "- Nil"
     },
     {
-     "name": "Resistant to‎",
+     "name": "Resistant to",
      "unit": null,
      "method": null,
      "type": "options",
@@ -34540,7 +34537,7 @@
      "referenceText": null
     },
     {
-     "name": "FINAL REPORT‎",
+     "name": "FINAL REPORT",
      "unit": null,
      "method": null,
      "type": "options",
@@ -36490,8 +36487,7 @@
      "female": null,
      "options": [
       "Not Applicable",
-      "Applicable",
-      "{\"testWithDropDownValuesId\":4677,\"testRangeId\":19666,\"value\":\"\",\"testId\":11010,\"unit\":null,\"method\":null,\"labId\":252,\"created_by\":11421,\"created_on\":1751734770991,\"last_modified_by\":0,\"last_updated_on\":null,\"properties\":null,\"version\":null}"
+      "Applicable"
      ],
      "calculated": true,
      "formula": null,
@@ -36508,8 +36504,7 @@
      "female": null,
      "options": [
       "Not Applicable",
-      "Applicable",
-      "{\"testWithDropDownValuesId\":4685,\"testRangeId\":19669,\"value\":\"\",\"testId\":11010,\"unit\":null,\"method\":null,\"labId\":252,\"created_by\":11421,\"created_on\":1751734771092,\"last_modified_by\":0,\"last_updated_on\":null,\"properties\":null,\"version\":null}"
+      "Applicable"
      ],
      "calculated": false,
      "formula": null,
@@ -36540,8 +36535,7 @@
      "female": null,
      "options": [
       "Not Applicable",
-      "Applicable",
-      "{\"testWithDropDownValuesId\":4688,\"testRangeId\":19670,\"value\":\"\",\"testId\":11010,\"unit\":null,\"method\":null,\"labId\":252,\"created_by\":11421,\"created_on\":1751734771126,\"last_modified_by\":0,\"last_updated_on\":null,\"properties\":null,\"version\":null}"
+      "Applicable"
      ],
      "calculated": true,
      "formula": null,
@@ -36575,8 +36569,7 @@
      "female": null,
      "options": [
       "Not Applicable",
-      "Applicable",
-      "{\"testWithDropDownValuesId\":4682,\"testRangeId\":19668,\"value\":\"\",\"testId\":11010,\"unit\":null,\"method\":null,\"labId\":252,\"created_by\":11421,\"created_on\":1751734771051,\"last_modified_by\":0,\"last_updated_on\":null,\"properties\":null,\"version\":null}"
+      "Applicable"
      ],
      "calculated": true,
      "formula": null,
