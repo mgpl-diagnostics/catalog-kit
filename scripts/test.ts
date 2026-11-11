@@ -13,6 +13,14 @@ const ok = (cond: unknown, msg: string) => {
 
 // ---- data
 ok(TESTS.length >= 600, `${TESTS.length} tests`);
+{
+  // two tests on one code made the api bill and print the wrong test ("CALC": Calcium booked as Calcitonin)
+  const seen = new Map<string, string>();
+  const dup = TESTS.filter((t) => { const k = (t.code ?? "").toUpperCase(); if (!k) return false; const hit = seen.has(k); seen.set(k, t.name); return hit; });
+  ok(dup.length === 0, `test codes are unique${dup.length ? ` (duplicated: ${dup.map((t) => t.code).join(", ")})` : ""}`);
+  ok(getTestByCode("CALCIUM")?.name === "Calcium" && getTestByCode("CALC")?.name === "Calcitonin", "Calcium and Calcitonin each have their own code");
+  ok(!TESTS.some((t) => /^no name$/i.test(t.name.trim())), "no empty \"No Name\" entries");
+}
 ok(new Set(TESTS.map((t) => t.id)).size === TESTS.length, "test ids are unique");
 ok(TESTS.every((t) => t.name && t.department), "every test has a name and department");
 ok(TESTS.every((t) => t.sampleType), "every test has a sample type");

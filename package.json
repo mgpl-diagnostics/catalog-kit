@@ -1,6 +1,6 @@
 {
   "name": "@mgpl-diagnostics/catalog-kit",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "MGPL Diagnostics test catalog: every test and profile with parameters, units, methods, reference ranges, sample types and INR prices. Typed, zero dependencies, with fast fuzzy search.",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
