@@ -14,6 +14,13 @@ const ok = (cond: unknown, msg: string) => {
 // ---- data
 ok(TESTS.length >= 600, `${TESTS.length} tests`);
 ok(new Set(TESTS.map((t) => t.id)).size === TESTS.length, "ids are unique");
+{
+  // two tests on one code made the api bill and print the wrong test ("CALC": Calcium booked as Calcitonin)
+  const seen = new Set<string>();
+  const dup = TESTS.filter((t) => { const k = (t.code ?? "").toUpperCase(); if (!k) return false; const hit = seen.has(k); seen.add(k); return hit; });
+  ok(dup.length === 0, `test codes are unique${dup.length ? ` (duplicated: ${dup.map((t) => t.code).join(", ")})` : ""}`);
+  ok(getTestByCode("CALCIUM")?.name === "Calcium" && getTestByCode("CALC")?.name === "Calcitonin", "Calcium and Calcitonin each have their own code");
+}
 
 // ---- MGPL ids: per-kind sequences, tests first, then profiles, then packages
 const KINDS: CatalogKind[] = ["test", "profile", "package"];
