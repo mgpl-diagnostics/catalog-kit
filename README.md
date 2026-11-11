@@ -75,6 +75,15 @@ computeCalculated(getTestByCode("LIFT")!, { "BILIRUBIN - TOTAL": "2.6", "BILIRUB
 
 Formulas are read by a small arithmetic parser (+ − × ÷ ^, min, max, age, sex constants), never `eval`.
 
+### Narratives, options and titre rules (1.2, 2.2)
+
+- `isNarrative(param)`: 695 text "parameters" are interpretation / clinical significance / note blocks,
+  not results. Print them as text under the test; never ask for a value. `formatRange` returns "" for them.
+- `formatRange` never prints an options list as a reference ("- / NEGATIVE / POSITIVE" was printed).
+  Placeholder options ("-") are gone, and options parameters without choices are text.
+- Widal (slide, tube): titres are a choice of dilutions, and RESULT is computed by `computeCalculated`
+  from a titre rule (`param.rule`), using the lab's own interpretation cut-offs. `parseTitre("1:80")` → 80.
+
 ## Search
 
 `search(query, { limit, department, sampleType, fuzzy })` ranks tests by:
