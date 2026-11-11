@@ -2,7 +2,7 @@
 import {
   DEPARTMENTS, SAMPLE_TYPES, TESTS, createSearchIndex, flagResult, formatRange, getTest, getTestByCode,
   isProfile, search, totalPrice,
-  computeCalculated, evaluate, formulaFor, resolvedFormulas, roundResult,
+  computeCalculated, evaluate, formulaFor, isNarrative, parseTitre, resolvedFormulas, roundResult,
 } from "../src/index";
 
 let failed = 0;
@@ -103,13 +103,41 @@ ok(per < 1000, "search under 1 ms per query");
   ok(!("BILIRUBIN (INDIRECT)" in computeCalculated(lft, { "BILIRUBIN - TOTAL": "high", "BILIRUBIN -DIRECT": "1" })), "a text value computes nothing");
   const gfr = TESTS.find((t) => t.code === "GFR")!;
   const e = computeCalculated(gfr, { CREATININE: "0.8" }, { sex: "female", ageYears: 33 })["GLOMERULAR FILTRATION RATE (GFR)"];
-  ok(e !== undefined && Math.abs(e - 98.53) < 0.1, `eGFR (CKD-EPI) female 33 y, creatinine 0.8 → ${e}`);
+  ok(typeof e === "number" && Math.abs(e - 98.53) < 0.1, `eGFR (CKD-EPI) female 33 y, creatinine 0.8 → ${e}`);
   ok(Object.keys(computeCalculated(gfr, { CREATININE: "0.8" })).length === 0, "eGFR needs sex and age: none given, nothing computed");
   ok(evaluate("min(#0,1)^-2", [0.5]) === 4 && evaluate("2^3^2", []) === 512 && evaluate("-(#0+1)*2", [1]) === -4, "evaluator: min, right-assoc ^, unary minus");
   ok(roundResult(1.3800000001) === 1.38 && roundResult(0.012345) === 0.0123, "results are rounded for printing");
   let threw = false;
   try { evaluate("process.exit(1)", []); } catch { threw = true; }
   ok(threw, "anything but arithmetic is refused (no eval)");
+}
+
+// ---- options, narratives, titre rules
+{
+  const all = TESTS.flatMap((t) => t.parameters);
+  ok(all.every((p) => !p.options?.some((o) => !o || o.trim() === "-")), "no \"-\" or empty placeholder among options");
+  ok(all.every((p) => p.type !== "options" || (p.options?.length ?? 0) > 0), "every options parameter has choices");
+  const opt = all.filter((p) => p.type === "options" && p.options!.length > 1 && !p.referenceText);
+  ok(opt.every((p) => formatRange(p) === ""), `an options list is never printed as a range (${opt.length} parameters)`);
+  const narratives = all.filter(isNarrative);
+  ok(narratives.length > 500 && narratives.every((p) => formatRange(p) === ""), `${narratives.length} narrative blocks (interpretation, clinical significance…) are not results and print no range`);
+  ok(!isNarrative(all.find((p) => p.name === "S.Typhi Antigen (O)")!) && !all.some((p) => p.type === "numeric" && isNarrative(p)), "results are never narratives");
+  ok(all.every((p) => !p.options?.some((o) => /^\s*[{[]/.test(o))), "no leaked database records among options");
+  const invisible = /[​-‏‪-‮⁠﻿]/;
+  ok(!TESTS.some((t) => invisible.test(t.name) || t.parameters.some((p) => invisible.test(p.name ?? "") || invisible.test(p.referenceText ?? ""))), "no invisible characters in names and references");
+  const aldo = TESTS.find((t) => t.code === "ALDORR")!;
+  ok(computeCalculated(aldo, { Aldosterone: "12", "PLASMA RENIN ACTIVITY": "3" })["Aldos/Renin Ratio"] === 4, "aldosterone/renin ratio computes (its inputs are numeric)");
+  ok(parseTitre("1:80") === 80 && parseTitre("1 : 160") === 160 && parseTitre("<1:20") === 0 && parseTitre("Negative") === 0 && parseTitre("") === null, "parseTitre");
+  const wids = TESTS.find((t) => t.code === "WIDS")!;
+  ok(wids.parameters.filter((p) => /Antigen/.test(p.name ?? "")).every((p) => p.type === "options" && p.options!.includes("1:80")), "Widal slide titres are a choice of dilutions");
+  const pos = computeCalculated(wids, { "S.Typhi Antigen (O)": "1:160", "S.Typhi Antigen (H)": "1:40" });
+  const neg = computeCalculated(wids, { "S.Typhi Antigen (O)": "1:40", "S.Typhi Antigen (H)": "<1:20" });
+  ok(pos.RESULT === "POSITIVE" && neg.RESULT === "NEGATIVE", "Widal slide: RESULT POSITIVE at 1:80 or more, else NEGATIVE");
+  ok(!("RESULT" in computeCalculated(wids, {})) && !("RESULT" in computeCalculated(wids, { "S.Typhi Antigen (O)": "1:320", RESULT: "NEGATIVE" })), "no titres → no RESULT; an entered RESULT is kept");
+  const widt = TESTS.find((t) => t.code === "WIDT")!;
+  ok(computeCalculated(widt, { "Salmonella typhi O (TO)": "1:80", "Salmonella typhi H (TH)": "1:160" }).Result === "NEGATIVE"
+    && computeCalculated(widt, { "Salmonella typhi O (TO)": "1:160" }).Result === "POSITIVE"
+    && computeCalculated(widt, { "Salmonella typhi H (TH)": "1:320" }).Result === "POSITIVE", "Widal tube: O above 1:80 or H above 1:160 is POSITIVE");
 }
 
 console.log(failed ? `\n${failed} FAILED` : "\nAll checks passed.");

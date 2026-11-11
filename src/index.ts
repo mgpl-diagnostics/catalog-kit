@@ -6,7 +6,7 @@ export * from "./types";
 export { createSearchIndex, normalize, SYNONYMS } from "./search";
 export type { SearchHit, SearchIndex, SearchOptions } from "./search";
 export { CATALOG };
-export { computeCalculated, evaluate, formulaFor, resolvedFormulas, roundResult } from "./calc";
+export { computeCalculated, evaluate, formulaFor, parseTitre, resolvedFormulas, roundResult } from "./calc";
 export type { CalcContext, ResolvedFormula } from "./calc";
 
 /** Every test, in catalog order. */
@@ -59,6 +59,7 @@ export function rangeFor(param: Parameter, sex?: Sex): Interval | null {
 
 /** "13 - 17", "< 5", "> 40", or the narrative reference when there is no interval. */
 export function formatRange(param: Parameter, sex?: Sex): string {
+  if (isNarrative(param)) return "";
   const r = rangeFor(param, sex);
   if (r) {
     const { low, high } = r;
@@ -66,8 +67,26 @@ export function formatRange(param: Parameter, sex?: Sex): string {
     if (high != null && high !== "") return `< ${high}`;
     if (low != null && low !== "") return `> ${low}`;
   }
-  if (param.options?.length) return param.options.join(" / ");
+  // the choices of an options parameter are not a reference: print its reference text, or nothing
   return param.referenceText ?? "";
+}
+
+const NARRATIVE_NAME = /interpret|significance|clinical|comment|note|remark|reference|ref\.|interval|information|limitation|caution|instruction|summary|uses|utility|methodolog|template|diagnosis|technology|increased|decreased|descriptive|what is/i;
+
+/**
+ * A narrative block (interpretation, clinical significance, notes…), not a result: printed as text
+ * under the test and never entered. A text parameter with a reference text that reads like a block:
+ * a heading-like name, a name ending in ":", text that starts by repeating the name, or no name at all.
+ * A result with a long banded reference (insulin PP, eGFR bands, uE3 by gestation) stays a result.
+ */
+export function isNarrative(param: Parameter): boolean {
+  if (param.type !== "text") return false;
+  const ref = param.referenceText?.replace(/\s+/g, " ").trim() ?? "";
+  if (ref.length < 30) return false;
+  const name = param.name?.replace(/\s+/g, " ").trim() ?? "";
+  if (!/[A-Za-z]/.test(name)) return true;
+  const head = name.replace(/[\s:.-]+$/, "").toLowerCase();
+  return NARRATIVE_NAME.test(name) || /:\s*$/.test(name) || ref.toLowerCase().startsWith(head);
 }
 
 /** Flag a numeric result: "L" below, "H" above, "" inside or not comparable. */

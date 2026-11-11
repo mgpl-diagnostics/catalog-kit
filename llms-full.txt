@@ -77,6 +77,15 @@ flagResult(hb, 10.2, "female");         // "L"
 totalPrice(["CBC", "HBA1C"]);           // { total, tests, unknown: [] }
 ```
 
+### Narratives, options and titre rules (1.2)
+
+- `isNarrative(param)`: 695 text "parameters" are interpretation / clinical significance / note blocks,
+  not results. Print them as text under the test; never ask for a value. `formatRange` returns "" for them.
+- `formatRange` never prints an options list as a reference ("- / NEGATIVE / POSITIVE" was printed).
+  Placeholder options ("-") are gone, and options parameters without choices are text.
+- Widal (slide, tube): titres are a choice of dilutions, and RESULT is computed by `computeCalculated`
+  from a titre rule (`param.rule`), using the lab's own interpretation cut-offs. `parseTitre("1:80")` → 80.
+
 ## Search
 
 `search(query, { limit, department, sampleType, fuzzy })` ranks tests by:
@@ -185,7 +194,7 @@ All rights reserved (see LICENSE).
 
 ## File: data/catalog.json
 
-_Omitted: 1250 KB. Read the file directly._
+_Omitted: 1249 KB. Read the file directly._
 
 
 ---
@@ -229,7 +238,7 @@ Key facts for agents:
 ```json
 {
   "name": "@mgpl-diagnostics/catalog-kit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "MGPL Diagnostics test catalog: every test and profile with parameters, units, methods, reference ranges, sample types and INR prices. Typed, zero dependencies, with fast fuzzy search.",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
@@ -372,7 +381,7 @@ console.log(`llms-full.txt: ${ordered.length} files, ${(out.length / 1024).toFix
 import {
   DEPARTMENTS, SAMPLE_TYPES, TESTS, createSearchIndex, flagResult, formatRange, getTest, getTestByCode,
   isProfile, search, totalPrice,
-  computeCalculated, evaluate, formulaFor, resolvedFormulas, roundResult,
+  computeCalculated, evaluate, formulaFor, isNarrative, parseTitre, resolvedFormulas, roundResult,
 } from "../src/index";
 
 let failed = 0;
@@ -473,13 +482,41 @@ ok(per < 1000, "search under 1 ms per query");
   ok(!("BILIRUBIN (INDIRECT)" in computeCalculated(lft, { "BILIRUBIN - TOTAL": "high", "BILIRUBIN -DIRECT": "1" })), "a text value computes nothing");
   const gfr = TESTS.find((t) => t.code === "GFR")!;
   const e = computeCalculated(gfr, { CREATININE: "0.8" }, { sex: "female", ageYears: 33 })["GLOMERULAR FILTRATION RATE (GFR)"];
-  ok(e !== undefined && Math.abs(e - 98.53) < 0.1, `eGFR (CKD-EPI) female 33 y, creatinine 0.8 → ${e}`);
+  ok(typeof e === "number" && Math.abs(e - 98.53) < 0.1, `eGFR (CKD-EPI) female 33 y, creatinine 0.8 → ${e}`);
   ok(Object.keys(computeCalculated(gfr, { CREATININE: "0.8" })).length === 0, "eGFR needs sex and age: none given, nothing computed");
   ok(evaluate("min(#0,1)^-2", [0.5]) === 4 && evaluate("2^3^2", []) === 512 && evaluate("-(#0+1)*2", [1]) === -4, "evaluator: min, right-assoc ^, unary minus");
   ok(roundResult(1.3800000001) === 1.38 && roundResult(0.012345) === 0.0123, "results are rounded for printing");
   let threw = false;
   try { evaluate("process.exit(1)", []); } catch { threw = true; }
   ok(threw, "anything but arithmetic is refused (no eval)");
+}
+
+// ---- options, narratives, titre rules
+{
+  const all = TESTS.flatMap((t) => t.parameters);
+  ok(all.every((p) => !p.options?.some((o) => !o || o.trim() === "-")), "no \"-\" or empty placeholder among options");
+  ok(all.every((p) => p.type !== "options" || (p.options?.length ?? 0) > 0), "every options parameter has choices");
+  const opt = all.filter((p) => p.type === "options" && p.options!.length > 1 && !p.referenceText);
+  ok(opt.every((p) => formatRange(p) === ""), `an options list is never printed as a range (${opt.length} parameters)`);
+  const narratives = all.filter(isNarrative);
+  ok(narratives.length > 500 && narratives.every((p) => formatRange(p) === ""), `${narratives.length} narrative blocks (interpretation, clinical significance…) are not results and print no range`);
+  ok(!isNarrative(all.find((p) => p.name === "S.Typhi Antigen (O)")!) && !all.some((p) => p.type === "numeric" && isNarrative(p)), "results are never narratives");
+  ok(all.every((p) => !p.options?.some((o) => /^\s*[{[]/.test(o))), "no leaked database records among options");
+  const invisible = /[​-‏‪-‮⁠﻿]/;
+  ok(!TESTS.some((t) => invisible.test(t.name) || t.parameters.some((p) => invisible.test(p.name ?? "") || invisible.test(p.referenceText ?? ""))), "no invisible characters in names and references");
+  const aldo = TESTS.find((t) => t.code === "ALDORR")!;
+  ok(computeCalculated(aldo, { Aldosterone: "12", "PLASMA RENIN ACTIVITY": "3" })["Aldos/Renin Ratio"] === 4, "aldosterone/renin ratio computes (its inputs are numeric)");
+  ok(parseTitre("1:80") === 80 && parseTitre("1 : 160") === 160 && parseTitre("<1:20") === 0 && parseTitre("Negative") === 0 && parseTitre("") === null, "parseTitre");
+  const wids = TESTS.find((t) => t.code === "WIDS")!;
+  ok(wids.parameters.filter((p) => /Antigen/.test(p.name ?? "")).every((p) => p.type === "options" && p.options!.includes("1:80")), "Widal slide titres are a choice of dilutions");
+  const pos = computeCalculated(wids, { "S.Typhi Antigen (O)": "1:160", "S.Typhi Antigen (H)": "1:40" });
+  const neg = computeCalculated(wids, { "S.Typhi Antigen (O)": "1:40", "S.Typhi Antigen (H)": "<1:20" });
+  ok(pos.RESULT === "POSITIVE" && neg.RESULT === "NEGATIVE", "Widal slide: RESULT POSITIVE at 1:80 or more, else NEGATIVE");
+  ok(!("RESULT" in computeCalculated(wids, {})) && !("RESULT" in computeCalculated(wids, { "S.Typhi Antigen (O)": "1:320", RESULT: "NEGATIVE" })), "no titres → no RESULT; an entered RESULT is kept");
+  const widt = TESTS.find((t) => t.code === "WIDT")!;
+  ok(computeCalculated(widt, { "Salmonella typhi O (TO)": "1:80", "Salmonella typhi H (TH)": "1:160" }).Result === "NEGATIVE"
+    && computeCalculated(widt, { "Salmonella typhi O (TO)": "1:160" }).Result === "POSITIVE"
+    && computeCalculated(widt, { "Salmonella typhi H (TH)": "1:320" }).Result === "POSITIVE", "Widal tube: O above 1:80 or H above 1:160 is POSITIVE");
 }
 
 console.log(failed ? `\n${failed} FAILED` : "\nAll checks passed.");
@@ -504,7 +541,7 @@ process.exit(failed ? 1 : 0);
  * associative), unary minus, parentheses, min(…), max(…), `age` (years) and sex-specific constants
  * written `m_0.9 f_0.7` (as in the CKD-EPI eGFR formula).
  */
-import type { LabTest, Parameter, Sex } from "./types";
+import type { LabTest, Parameter, Sex, TitreRule } from "./types";
 
 export interface CalcContext {
   sex?: Sex;
@@ -619,13 +656,39 @@ export function roundResult(x: number): number {
  * known when the formula needs them. Chains (A/G ratio from a calculated globulin) are followed.
  * Values already present in `values` are never replaced.
  */
-export function computeCalculated(test: LabTest, values: Record<string, unknown>, ctx: CalcContext = {}): Record<string, number> {
+/** "1:80", "1 : 160" → 80, 160; "<1:20", "Negative", "Nil" → 0; anything else → null. */
+export function parseTitre(v: unknown): number | null {
+  if (typeof v !== "string" && typeof v !== "number") return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  if (/^</.test(s) || /^(neg|nil|no\s|not\s)/i.test(s)) return 0;
+  const m = s.match(/1\s*:\s*(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+function applyRule(rule: TitreRule, values: Record<string, unknown>): string | null {
+  const all = rule.groups.flatMap((g) => g.params.map((p) => parseTitre(values[p])));
+  if (all.every((x) => x === null)) return null; // nothing entered yet
+  const hit = rule.groups.some((g) => g.params.some((p) => (parseTitre(values[p]) ?? 0) >= g.atLeast));
+  return hit ? rule.positive : rule.negative;
+}
+
+/**
+ * Values of the test's calculated parameters, from the values entered (by parameter name): numbers
+ * from formulas, and text from interpretation rules (a Widal RESULT from its titres).
+ */
+export function computeCalculated(test: LabTest, values: Record<string, unknown>, ctx: CalcContext = {}): Record<string, number | string> {
   const known = new Map<string, number>();
   for (const [k, v] of Object.entries(values)) {
     const n = num(v);
     if (n !== null) known.set(k, n);
   }
-  const out: Record<string, number> = {};
+  const out: Record<string, number | string> = {};
+  for (const p of test.parameters) {
+    if (!p.rule || !p.name || (p.name in values && String(values[p.name] ?? "").trim() !== "")) continue;
+    const r = applyRule(p.rule, values);
+    if (r !== null) out[p.name] = r;
+  }
   const formulas = resolvedFormulas(test).filter((f) => !(f.param.name in values) || num(values[f.param.name]) === null);
   for (let pass = 0, progress = true; progress && pass < 8; pass++) {
     progress = false;
@@ -641,8 +704,9 @@ export function computeCalculated(test: LabTest, values: Record<string, unknown>
         continue;
       }
       if (!Number.isFinite(r)) continue;
-      out[f.param.name] = roundResult(r);
-      known.set(f.param.name, out[f.param.name]!);
+      const rounded = roundResult(r);
+      out[f.param.name] = rounded;
+      known.set(f.param.name, rounded);
       progress = true;
     }
   }
@@ -750,7 +814,7 @@ export * from "./types";
 export { createSearchIndex, normalize, SYNONYMS } from "./search";
 export type { SearchHit, SearchIndex, SearchOptions } from "./search";
 export { CATALOG };
-export { computeCalculated, evaluate, formulaFor, resolvedFormulas, roundResult } from "./calc";
+export { computeCalculated, evaluate, formulaFor, parseTitre, resolvedFormulas, roundResult } from "./calc";
 export type { CalcContext, ResolvedFormula } from "./calc";
 
 /** Every test, in catalog order. */
@@ -803,6 +867,7 @@ export function rangeFor(param: Parameter, sex?: Sex): Interval | null {
 
 /** "13 - 17", "< 5", "> 40", or the narrative reference when there is no interval. */
 export function formatRange(param: Parameter, sex?: Sex): string {
+  if (isNarrative(param)) return "";
   const r = rangeFor(param, sex);
   if (r) {
     const { low, high } = r;
@@ -810,8 +875,26 @@ export function formatRange(param: Parameter, sex?: Sex): string {
     if (high != null && high !== "") return `< ${high}`;
     if (low != null && low !== "") return `> ${low}`;
   }
-  if (param.options?.length) return param.options.join(" / ");
+  // the choices of an options parameter are not a reference: print its reference text, or nothing
   return param.referenceText ?? "";
+}
+
+const NARRATIVE_NAME = /interpret|significance|clinical|comment|note|remark|reference|ref\.|interval|information|limitation|caution|instruction|summary|uses|utility|methodolog|template|diagnosis|technology|increased|decreased|descriptive|what is/i;
+
+/**
+ * A narrative block (interpretation, clinical significance, notes…), not a result: printed as text
+ * under the test and never entered. A text parameter with a reference text that reads like a block:
+ * a heading-like name, a name ending in ":", text that starts by repeating the name, or no name at all.
+ * A result with a long banded reference (insulin PP, eGFR bands, uE3 by gestation) stays a result.
+ */
+export function isNarrative(param: Parameter): boolean {
+  if (param.type !== "text") return false;
+  const ref = param.referenceText?.replace(/\s+/g, " ").trim() ?? "";
+  if (ref.length < 30) return false;
+  const name = param.name?.replace(/\s+/g, " ").trim() ?? "";
+  if (!/[A-Za-z]/.test(name)) return true;
+  const head = name.replace(/[\s:.-]+$/, "").toLowerCase();
+  return NARRATIVE_NAME.test(name) || /:\s*$/.test(name) || ref.toLowerCase().startsWith(head);
 }
 
 /** Flag a numeric result: "L" below, "H" above, "" inside or not comparable. */
@@ -1155,6 +1238,22 @@ export interface Parameter {
   formulaText: string | null;
   /** Narrative reference (age bands, interpretation), HTML stripped. */
   referenceText: string | null;
+  /**
+   * An interpretation computed from other parameters' values (e.g. a Widal RESULT from its titres).
+   * Set together with `calculated: true` and a readable `formulaText`.
+   */
+  rule?: TitreRule;
+}
+
+/**
+ * POSITIVE when any listed parameter reaches its titre (1:n written as n), else NEGATIVE.
+ * The cut-offs come from the lab's own interpretation text for the test.
+ */
+export interface TitreRule {
+  kind: "titre";
+  groups: { params: string[]; atLeast: number }[];
+  positive: string;
+  negative: string;
 }
 
 export type Department =

@@ -36,6 +36,22 @@ export interface Parameter {
   formulaText: string | null;
   /** Narrative reference (age bands, interpretation), HTML stripped. */
   referenceText: string | null;
+  /**
+   * An interpretation computed from other parameters' values (e.g. a Widal RESULT from its titres).
+   * Set together with `calculated: true` and a readable `formulaText`.
+   */
+  rule?: TitreRule;
+}
+
+/**
+ * POSITIVE when any listed parameter reaches its titre (1:n written as n), else NEGATIVE.
+ * The cut-offs come from the lab's own interpretation text for the test.
+ */
+export interface TitreRule {
+  kind: "titre";
+  groups: { params: string[]; atLeast: number }[];
+  positive: string;
+  negative: string;
 }
 
 export type Department =

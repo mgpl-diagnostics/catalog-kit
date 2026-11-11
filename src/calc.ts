@@ -10,7 +10,7 @@
  * associative), unary minus, parentheses, min(…), max(…), `age` (years) and sex-specific constants
  * written `m_0.9 f_0.7` (as in the CKD-EPI eGFR formula).
  */
-import type { LabTest, Parameter, Sex } from "./types";
+import type { LabTest, Parameter, Sex, TitreRule } from "./types";
 
 export interface CalcContext {
   sex?: Sex;
@@ -125,13 +125,39 @@ export function roundResult(x: number): number {
  * known when the formula needs them. Chains (A/G ratio from a calculated globulin) are followed.
  * Values already present in `values` are never replaced.
  */
-export function computeCalculated(test: LabTest, values: Record<string, unknown>, ctx: CalcContext = {}): Record<string, number> {
+/** "1:80", "1 : 160" → 80, 160; "<1:20", "Negative", "Nil" → 0; anything else → null. */
+export function parseTitre(v: unknown): number | null {
+  if (typeof v !== "string" && typeof v !== "number") return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  if (/^</.test(s) || /^(neg|nil|no\s|not\s)/i.test(s)) return 0;
+  const m = s.match(/1\s*:\s*(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+function applyRule(rule: TitreRule, values: Record<string, unknown>): string | null {
+  const all = rule.groups.flatMap((g) => g.params.map((p) => parseTitre(values[p])));
+  if (all.every((x) => x === null)) return null; // nothing entered yet
+  const hit = rule.groups.some((g) => g.params.some((p) => (parseTitre(values[p]) ?? 0) >= g.atLeast));
+  return hit ? rule.positive : rule.negative;
+}
+
+/**
+ * Values of the test's calculated parameters, from the values entered (by parameter name): numbers
+ * from formulas, and text from interpretation rules (a Widal RESULT from its titres).
+ */
+export function computeCalculated(test: LabTest, values: Record<string, unknown>, ctx: CalcContext = {}): Record<string, number | string> {
   const known = new Map<string, number>();
   for (const [k, v] of Object.entries(values)) {
     const n = num(v);
     if (n !== null) known.set(k, n);
   }
-  const out: Record<string, number> = {};
+  const out: Record<string, number | string> = {};
+  for (const p of test.parameters) {
+    if (!p.rule || !p.name || (p.name in values && String(values[p.name] ?? "").trim() !== "")) continue;
+    const r = applyRule(p.rule, values);
+    if (r !== null) out[p.name] = r;
+  }
   const formulas = resolvedFormulas(test).filter((f) => !(f.param.name in values) || num(values[f.param.name]) === null);
   for (let pass = 0, progress = true; progress && pass < 8; pass++) {
     progress = false;
@@ -147,8 +173,9 @@ export function computeCalculated(test: LabTest, values: Record<string, unknown>
         continue;
       }
       if (!Number.isFinite(r)) continue;
-      out[f.param.name] = roundResult(r);
-      known.set(f.param.name, out[f.param.name]!);
+      const rounded = roundResult(r);
+      out[f.param.name] = rounded;
+      known.set(f.param.name, rounded);
       progress = true;
     }
   }
